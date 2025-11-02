@@ -1,3 +1,4 @@
+// [file name]: Button.tsx (updated)
 import { Loader } from "@/components/loader/Loader";
 import { Slot } from "@/components/slot/Slot";
 import { Tooltip } from "@/components/tooltip/Tooltip";
@@ -7,16 +8,22 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   as?: React.ElementType;
   children?: React.ReactNode;
   className?: string;
-  displayContent?: "items-first" | "items-last"; // used for children of component
+  displayContent?: "items-first" | "items-last";
   external?: boolean;
   href?: string;
   loading?: boolean;
   shape?: "base" | "square" | "circular";
-  size?: "sm" | "md" | "lg" | "base";
+  size?: "sm" | "md" | "lg" | "base" | "icon"; // Added "icon" size
   title?: string | React.ReactNode;
   toggled?: boolean;
   tooltip?: string;
-  variant?: "primary" | "secondary" | "ghost" | "destructive" | "tertiary";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "ghost"
+    | "destructive"
+    | "tertiary"
+    | "outline"; // Added "outline" variant
 };
 
 const ButtonComponent = ({
@@ -47,10 +54,12 @@ const ButtonComponent = ({
           "btn-tertiary": variant === "tertiary",
           "btn-ghost": variant === "ghost",
           "btn-destructive": variant === "destructive",
+          "btn-outline": variant === "outline", // Added outline variant
 
           "add-size-sm gap-1": size === "sm",
           "add-size-md gap-1.5": size === "md",
           "add-size-base gap-2": size === "base",
+          "add-size-icon p-2": size === "icon", // Added icon size
 
           square: shape === "square",
           circular: shape === "circular",
@@ -76,7 +85,7 @@ const ButtonComponent = ({
           className={cn({
             "w-3": size === "sm",
             "w-3.5": size === "md",
-            "w-4": size === "base",
+            "w-4": size === "base" || size === "icon",
             "ease-bounce transition-[width] duration-300 starting:w-0":
               !children
           })}

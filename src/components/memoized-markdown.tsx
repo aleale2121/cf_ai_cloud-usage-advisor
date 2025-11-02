@@ -13,8 +13,38 @@ type TokensList = Array<Tokens.Generic & { raw: string }>;
 
 const MemoizedMarkdownBlock = memo(
   ({ content }: { content: string }) => (
-    <div className="markdown-body">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    <div className="markdown-body w-full max-w-full overflow-hidden break-words">
+      <ReactMarkdown 
+        remarkPlugins={[remarkGfm]}
+        components={{
+          // Override code blocks to ensure they wrap
+          code: (props) => {
+            const { className, children, ...rest } = props;
+            const isInline = !className?.includes('language-');
+            return (
+              <code 
+                className={`${className || ''} break-words ${isInline ? '' : 'whitespace-pre-wrap block'}`}
+                {...rest}
+              >
+                {children}
+              </code>
+            );
+          },
+          pre: (props) => {
+            const { children, ...rest } = props;
+            return (
+              <pre 
+                className="whitespace-pre-wrap break-words max-w-full overflow-x-hidden"
+                {...rest}
+              >
+                {children}
+              </pre>
+            );
+          }
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   ),
   (prevProps, nextProps) => prevProps.content === nextProps.content

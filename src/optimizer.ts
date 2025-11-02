@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-export async function analyzeCostsWithLLM(
+export async function analyzeCostsWithGemini(
   env: Env,
   plan: string,
   metrics: string,
@@ -12,33 +12,49 @@ export async function analyzeCostsWithLLM(
   });
 
   const prompt = `
-You are a cloud cost optimization expert.
+You are a cloud FinOps expert. Given PLAN/BILLING + USAGE METRICS + optional COMMENT,
+analyze cost drivers and propose optimizations. If appropriate, suggest Cloudflare options
+(Workers, R2, KV, D1). Return:
 
-PLAN / BILLING DATA:
-${plan}
+(A) Plain-English summary detailed
 
-USAGE METRICS:
-${metrics}
+(B) JSON array in triple backticks with items:
+   {
+     "Area": string,
+     "Resource": string,
+     "Issue": string,
+     "Optimization": string,
+     "Cloudflare_Alternative": string
+   }
 
-COMMENT:
-${comment}
+--- PLAN / BILLING ---
+${plan || "(none provided)"}
 
-TASKS:
-1. Identify inefficiencies.
-2. Suggest optimizations.
-3. Propose Cloudflare alternatives (Workers, R2, KV, D1).
-4. Return (A) plain-English summary and (B) JSON array in triple backticks.
+--- USAGE METRICS ---
+${metrics || "(none provided)"}
+
+--- COMMENT ---
+${comment || "(none provided)"} 
 `;
 
-  const res = await ai.chat.completions.create({
-    model: "gemini-2.0-flash",
-    messages: [
-      { role: "system", content: "You are a helpful assistant..." },
-      { role: "user", content: prompt }
-    ]
-  });
+  try {
+    const res = await ai.chat.completions.create({
+      model: "gemini-2.0-flash",
+      temperature: 0.3,
+      messages: [
+        {
+          role: "system",
+          content: "You are a concise, actionable FinOps assistant."
+        },
+        { role: "user", content: prompt }
+      ]
+    });
 
-  const out = res.choices?.[0]?.message?.content;
-  if (!out) throw new Error("No response content from Gemini");
-  return out;
+    const out = res.choices?.[0]?.message?.content?.trim();
+    if (!out) throw new Error("Empty response from Gemini");
+    return out;
+  } catch (err) {
+    console.error("Gemini call failed:", err);
+    throw new Error("Cost analysis failed");
+  }
 }
