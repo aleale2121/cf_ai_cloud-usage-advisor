@@ -1,68 +1,63 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react"; // Import X icon for clear functionality
+import { Upload } from "lucide-react";
 
 type FileUploadProps = {
   onFileSelect: (file: File | null) => void;
-  selectedFile?: File | null; // Add selectedFile prop
-  accept?: string; // e.g. ".txt,.csv,.json"
+  accept?: string;
   label?: string;
   className?: string;
+  compact?: boolean;
 };
 
 export function FileUpload({
   onFileSelect,
-  selectedFile,
   accept,
   label,
-  className
+  className,
+  compact = false
 }: FileUploadProps) {
-  const [fileName, setFileName] = useState<string>("");
-
-  // Sync with selectedFile prop
-  useEffect(() => {
-    if (selectedFile) {
-      setFileName(selectedFile.name);
-    } else {
-      setFileName("");
-    }
-  }, [selectedFile]);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    onFileSelect(file);
+    // Reset input to allow selecting same file again
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
     if (file) {
-      setFileName(file.name);
       onFileSelect(file);
-    } else {
-      setFileName("");
-      onFileSelect(null);
     }
   };
 
-  const handleClear = () => {
-    setFileName("");
-    onFileSelect(null);
-    // Reset the input value
-    const fileInput = document.querySelector(
-      'input[type="file"]'
-    ) as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
-  };
-
-  return (
-    <div className={cn("w-full", className)}>
-      {label && <p className="mb-1 font-medium">{label}</p>}
-      <div className="relative">
+  if (compact) {
+    return (
+      <div className={cn("w-full", className)}>
         <label
           className={cn(
-            "flex items-center justify-between w-full px-4 py-6 border-2 border-dashed rounded-lg cursor-pointer",
-            "hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
-            fileName
-              ? "border-blue-300 bg-blue-50/50 dark:bg-blue-900/20 dark:border-blue-700"
-              : "border-slate-300 dark:border-slate-600"
+            "flex items-center justify-center w-full px-3 py-2 border border-dashed rounded-md cursor-pointer transition-colors text-xs",
+            isDragging
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+              : "border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"
           )}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
           <input
             type="file"
@@ -70,29 +65,50 @@ export function FileUpload({
             accept={accept}
             onChange={handleChange}
           />
-          <span
-            className={cn(
-              "text-lg",
-              fileName
-                ? "text-blue-700 dark:text-blue-300 font-medium"
-                : "text-slate-500 dark:text-slate-400"
-            )}
-          >
-            {fileName ? fileName : "Click to upload or drag a file here"}
+          <Upload className="h-3 w-3 text-slate-400 mr-2" />
+          <span className="text-slate-600 dark:text-slate-400 truncate">
+            {label || "Upload File"}
           </span>
         </label>
-
-        {/* Clear button - only show when there's a file */}
-        {fileName && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
       </div>
+    );
+  }
+
+  return (
+    <div className={cn("w-full", className)}>
+      {label && (
+        <p className="mb-3 font-semibold text-lg text-slate-700 dark:text-slate-300">
+          {label}
+        </p>
+      )}
+
+      <label
+        className={cn(
+          "flex flex-col items-center justify-center w-full px-4 py-8 border-2 border-dashed rounded-lg cursor-pointer transition-colors",
+          isDragging
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+            : "border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+        )}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <input
+          type="file"
+          className="hidden"
+          accept={accept}
+          onChange={handleChange}
+        />
+        <Upload className="h-8 w-8 text-slate-400 mb-3" />
+        <span className="text-base text-slate-600 dark:text-slate-400 text-center">
+          Click to upload or drag a file here
+        </span>
+        {accept && (
+          <span className="text-sm text-slate-500 dark:text-slate-500 mt-2">
+            Supported: {accept}
+          </span>
+        )}
+      </label>
     </div>
   );
 }

@@ -19,7 +19,8 @@
   "r2_buckets": [
     {
       "binding": "FILES",
-      "bucket_name": "cloud-finops-files"
+      "bucket_name": "cloud-finops-files",
+      "preview_bucket_name": "cloud-finops-files-preview"
     }
   ],
   "durable_objects": {

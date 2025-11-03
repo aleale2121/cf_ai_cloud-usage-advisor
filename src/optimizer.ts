@@ -4,7 +4,8 @@ export async function analyzeCostsWithGemini(
   env: Env,
   plan: string,
   metrics: string,
-  comment: string
+  comment: string,
+  context: string = ""
 ): Promise<string> {
   const ai = new OpenAI({
     apiKey: env.GOOGLE_GEMINI_API_KEY,
@@ -12,7 +13,7 @@ export async function analyzeCostsWithGemini(
   });
 
   const prompt = `
-You are a cloud FinOps expert. Given PLAN/BILLING + USAGE METRICS + optional COMMENT,
+You are a cloud FinOps expert. Given PLAN/BILLING + USAGE METRICS + optional COMMENT + RELEVANT CONTEXT,
 analyze cost drivers and propose optimizations. If appropriate, suggest Cloudflare options
 (Workers, R2, KV, D1). Return:
 
@@ -26,6 +27,9 @@ analyze cost drivers and propose optimizations. If appropriate, suggest Cloudfla
      "Optimization": string,
      "Cloudflare_Alternative": string
    }
+
+--- RELEVANT CONTEXT FROM PREVIOUS CONVERSATIONS ---
+${context || "(no relevant context)"}
 
 --- PLAN / BILLING ---
 ${plan || "(none provided)"}

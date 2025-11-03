@@ -7,6 +7,7 @@ declare namespace Cloudflare {
 		GOOGLE_GEMINI_API_KEY: string;
 		ASSETS: Fetcher;
 		DB: D1Database;  
+		FILES: R2Bucket;
 	}
 }
 interface Env extends Cloudflare.Env {}

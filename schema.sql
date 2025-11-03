@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 
 -- Messages in a thread
-CREATE TABLE messages (
+CREATE TABLE IF NOT EXISTS messages (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   userId     TEXT NOT NULL,
   threadId   TEXT NOT NULL,
@@ -15,6 +15,7 @@ CREATE TABLE messages (
   content    TEXT NOT NULL,
   relevant   INTEGER NOT NULL DEFAULT 0,
   analysisId INTEGER,
+  messageId  TEXT NOT NULL,
   createdAt  TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (threadId) REFERENCES conversations(threadId)
 );
@@ -32,11 +33,27 @@ CREATE TABLE IF NOT EXISTS analyses (
   FOREIGN KEY (threadId) REFERENCES conversations(threadId)
 );
 
-CREATE INDEX IF NOT EXISTS idx_conv_user_created
-ON conversations (userId, datetime(createdAt) DESC);
+-- File storage table
+CREATE TABLE IF NOT EXISTS uploaded_files (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  userId TEXT NOT NULL,
+  threadId TEXT NOT NULL,
+  messageId TEXT NOT NULL, -- Used for sessionId initially, then updated to final messageId
+  analysisId INTEGER,
+  fileName TEXT NOT NULL,
+  fileType TEXT NOT NULL,
+  fileSize INTEGER NOT NULL,
+  r2Key TEXT NOT NULL UNIQUE,
+  uploadedAt TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (threadId) REFERENCES conversations(threadId),
+  FOREIGN KEY (analysisId) REFERENCES analyses(id)
+);
 
-CREATE INDEX IF NOT EXISTS idx_msg_thread_created
-ON messages (threadId, datetime(createdAt) ASC);
-
-CREATE INDEX IF NOT EXISTS idx_analyses_user_created
-ON analyses (userId, datetime(createdAt) DESC);
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_conv_user_created ON conversations (userId, datetime(createdAt) DESC);
+CREATE INDEX IF NOT EXISTS idx_msg_thread_created ON messages (threadId, datetime(createdAt) ASC);
+CREATE INDEX IF NOT EXISTS idx_msg_messageId ON messages (messageId);
+CREATE INDEX IF NOT EXISTS idx_analyses_user_created ON analyses (userId, datetime(createdAt) DESC);
+CREATE INDEX IF NOT EXISTS idx_files_user_thread ON uploaded_files(userId, threadId);
+CREATE INDEX IF NOT EXISTS idx_files_message ON uploaded_files(messageId);
+CREATE INDEX IF NOT EXISTS idx_files_analysis ON uploaded_files(analysisId);

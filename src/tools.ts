@@ -6,7 +6,7 @@ import { z } from "zod/v3";
 
 import type { Chat } from "./server";
 import { getCurrentAgent } from "agents";
-import { analyzeCostsWithLLM } from "./optimizer";
+import { analyzeCostsWithGemini } from "./optimizer";
 
 const analyzeCosts = tool({
   description: "Analyze a cloud plan + usage metrics and suggest optimizations",
@@ -18,7 +18,7 @@ const analyzeCosts = tool({
   execute: async ({ plan, metrics, comment }) => {
     const { agent } = getCurrentAgent<Chat>();
     const env = (agent as any).env as Env;
-    return await analyzeCostsWithLLM(env, plan, metrics, comment ?? "");
+    return await analyzeCostsWithGemini(env, plan, metrics, comment ?? "");
   }
 });
 

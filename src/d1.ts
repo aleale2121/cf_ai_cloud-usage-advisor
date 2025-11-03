@@ -1,3 +1,4 @@
+import { type UploadedFile } from "./file-storage";
 export interface Thread {
   threadId: string;
   title: string;
@@ -5,10 +6,12 @@ export interface Thread {
   msgCount?: number;
 }
 
-export interface MessageRow {
+export interface MessageWithFiles {
   role: string;
   content: string;
-  relevant?: number;
+  relevant: boolean;
+  messageId: string;
+  files: UploadedFile[];
 }
 
 export async function createThread(env: Env, userId: string): Promise<string> {
@@ -46,34 +49,78 @@ export async function saveMessage(
   role: "user" | "assistant",
   content: string,
   relevant: boolean,
-  analysisId?: number | null
-): Promise<void> {
+  analysisId?: number | null,
+  messageId?: string
+): Promise<string> {
+  const msgId = messageId || crypto.randomUUID();
+
   await env.DB.prepare(
-    `INSERT INTO messages (userId, threadId, role, content, relevant, analysisId, createdAt)
-     VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+    `INSERT INTO messages (userId, threadId, role, content, relevant, analysisId, messageId, createdAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
   )
-    .bind(userId, threadId, role, content, relevant ? 1 : 0, analysisId ?? null)
+    .bind(
+      userId,
+      threadId,
+      role,
+      content,
+      relevant ? 1 : 0,
+      analysisId ?? null,
+      msgId
+    )
     .run();
+
+  return msgId;
 }
 
-export async function getThreadMessages(
+export async function getThreadMessagesWithFiles(
   env: Env,
   userId: string,
   threadId: string
-) {
-  const { results } = await env.DB.prepare(
-    `SELECT role, content, relevant FROM messages
+): Promise<MessageWithFiles[]> {
+  // Get messages
+  const { results: messages } = await env.DB.prepare(
+    `SELECT role, content, relevant, messageId FROM messages
      WHERE userId = ? AND threadId = ?
      ORDER BY datetime(createdAt) ASC`
   )
     .bind(userId, threadId)
     .all();
 
-  const rows = (results as unknown as MessageRow[]) ?? [];
-  return rows.map((r) => ({
-    role: r.role,
-    content: r.content,
-    relevant: !!r.relevant
+  // Get files for this thread
+  const { results: files } = await env.DB.prepare(
+    `SELECT id, fileName, fileType, fileSize, r2Key, uploadedAt, messageId 
+     FROM uploaded_files 
+     WHERE userId = ? AND threadId = ?
+     ORDER BY uploadedAt ASC`
+  )
+    .bind(userId, threadId)
+    .all();
+
+  // Group files by messageId
+  const filesByMessage = (files as any[]).reduce((acc, file) => {
+    if (file.messageId) {
+      if (!acc[file.messageId]) {
+        acc[file.messageId] = [];
+      }
+      acc[file.messageId].push({
+        id: file.id,
+        fileName: file.fileName,
+        fileType: file.fileType,
+        fileSize: file.fileSize,
+        r2Key: file.r2Key,
+        uploadedAt: file.uploadedAt
+      });
+    }
+    return acc;
+  }, {});
+
+  // Combine messages with their files
+  return (messages as any[]).map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+    relevant: !!msg.relevant,
+    messageId: msg.messageId,
+    files: filesByMessage[msg.messageId] || []
   }));
 }
 
@@ -93,7 +140,6 @@ export async function saveAnalysis(
     .bind(userId, threadId, plan, metrics, comment, result)
     .run();
 
-  // meta.last_row_id is returned by D1 for inserts
   const insertedId = (meta as { last_row_id?: number }).last_row_id ?? 0;
   return insertedId;
 }
@@ -160,7 +206,9 @@ export async function deleteThread(
   userId: string,
   threadId: string
 ): Promise<void> {
-  // Optional: enforce userId if you want to ensure only owner can delete
+  await env.DB.prepare(`DELETE FROM uploaded_files WHERE threadId = ?`)
+    .bind(threadId)
+    .run();
   await env.DB.prepare(`DELETE FROM messages WHERE threadId = ?`)
     .bind(threadId)
     .run();
