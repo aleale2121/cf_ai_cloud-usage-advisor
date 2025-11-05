@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import { MessageCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { Header } from "@/components/layout/Header";
@@ -9,8 +9,6 @@ import { useChat } from "@/hooks/useChat";
 export default function App() {
   const [showSidebar, setShowSidebar] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  const hasMounted = useRef(false);
 
   const {
     message,
@@ -25,26 +23,19 @@ export default function App() {
     handleFileSelect,
     handleRemoveFile,
     handleSend,
-    loadChatHistory,
     isSendEnabled
   } = useChat();
 
-  // Fixed auto-scroll - only trigger when chat or loading changes
+  // Auto-scroll whenever a new message is added
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally re-run when chat grows
   useEffect(() => {
-    if (chatContainerRef.current) {
-      const { scrollHeight, clientHeight } = chatContainerRef.current;
-      chatContainerRef.current.scrollTop = scrollHeight - clientHeight;
-    }
-  }, [chat, loading]);
+    if (!chatContainerRef.current) return;
 
-  // FIX: Load chat history only on initial mount
-  useEffect(() => {
-    if (!hasMounted.current) {
-      console.log("🚀 App mounted - loading chat history");
-      loadChatHistory();
-      hasMounted.current = true;
-    }
-  }, []); // Empty dependency array - only run once on mount
+    chatContainerRef.current.scrollTo({
+      top: chatContainerRef.current.scrollHeight,
+      behavior: "smooth"
+    });
+  }, [chat.length]);
 
   const handleThreadSelectWithSidebar = async (threadId: string) => {
     const shouldCloseSidebar = await handleThreadSelect(threadId);
