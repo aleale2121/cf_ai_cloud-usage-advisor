@@ -78,8 +78,8 @@ It assists cloud engineers and financial teams by analyzing **cloud billing plan
 ### 📦 Clone the Project
 
 ```bash
-git clone https://github.com/aleale2121/cf_ai_finops_copilot.git
-cd cf_ai_finops_copilot
+git clone https://github.com/aleale2121/cf_ai_cloudspend_advisor.git
+cd cf_ai_cloudspend_advisor
 npm install
 ```
 
