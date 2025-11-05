@@ -1,8 +1,8 @@
-# Cloud FinOps Copilot (Agentic AI Project)
+# CloudSpend Advisor (Agentic AI Project)
 
 ## Overview
 
-**Cloud FinOps Copilot** is an **Agentic AI-powered application** built on **Cloudflare’s full-stack AI platform**.  
+**CloudSpend Advisor** is an **Agentic AI-powered application** built on **Cloudflare’s full-stack AI platform**.  
 It assists cloud engineers and financial teams by analyzing **cloud billing plans and usage metrics**, providing **LLM-driven cost optimization insights** through a real-time chat interface.
 
 ---
