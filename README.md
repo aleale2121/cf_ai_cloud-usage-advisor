@@ -1,238 +1,149 @@
-# 🤖 Chat Agent Starter Kit
+# Cloud FinOps Copilot (Agentic AI Project)
 
-![npm i agents command](./npm-agents-banner.svg)
+## Overview
 
-<a href="https://deploy.workers.cloudflare.com/?url=https://github.com/cloudflare/agents-starter"><img src="https://deploy.workers.cloudflare.com/button" alt="Deploy to Cloudflare"/></a>
+**Cloud FinOps Copilot** is an **Agentic AI-powered application** built on **Cloudflare’s full-stack AI platform**.  
+It assists cloud engineers and financial teams by analyzing **cloud billing plans and usage metrics**, providing **LLM-driven cost optimization insights** through a real-time chat interface.
 
-A starter template for building AI-powered chat agents using Cloudflare's Agent platform, powered by [`agents`](https://www.npmjs.com/package/agents). This project provides a foundation for creating interactive chat experiences with AI, complete with a modern UI and tool integration capabilities.
+---
 
 ## Features
 
-- 💬 Interactive chat interface with AI
-- 🛠️ Built-in tool system with human-in-the-loop confirmation
-- 📅 Advanced task scheduling (one-time, delayed, and recurring via cron)
-- 🌓 Dark/Light theme support
-- ⚡️ Real-time streaming responses
-- 🔄 State management and chat history
-- 🎨 Modern, responsive UI
+- **LLM Integration:** Uses **Cloudflare Workers AI (Llama 3.3)** for relevance filtering & summaries, and **Google Gemini 2.0** for in-depth FinOps analysis.
+- **Workflow & Coordination:** Orchestrated with **Cloudflare Workers** and **Durable Objects** for real-time multi-user chat persistence.
+- **User Interaction:** Chat-based interface built with **React + TypeScript + TailwindCSS** (deployed via Cloudflare Pages).
+- **Memory / State:** Uses **Cloudflare D1** (SQLite-compatible) for conversation, analysis, and message history.
+- **File Storage:** Uses **Cloudflare R2** to store uploaded plan & metrics files securely.
+- **Agentic Flow:** Each user query dynamically triggers LLM reasoning, analysis, and thread-aware state memory retrieval.
 
-## Prerequisites
+---
 
-- Cloudflare account
-- OpenAI API key
+## Architecture
 
-## Quick Start
-
-1. Create a new project:
-
-```bash
-npx create-cloudflare@latest --template cloudflare/agents-starter
+```markdown
+┌────────────────────────────┐
+│ Cloudflare Pages (React)   │  ← Chat UI, uploads, real-timeupdates                     
+└──────────────┬─────────────┘
+               │
+               ▼
+┌────────────────────────────────┐
+│ Cloudflare Worker (server)     │  ← LLM orchestration, message routing
+│  - Durable Object: Chat        │
+│  - Calls Llama 3.3 (Workers AI)│
+│  - Calls Gemini (external API) │
+└──────────────┬─────────────────┘
+               │
+               ▼
+┌────────────────────────────┐
+│ D1 Database (SQLite)       │  ← conversations, messages, analyses
+│ R2 Storage (S3-like)       │  ← uploaded billing/metrics files
+└────────────────────────────┘
 ```
 
-2. Install dependencies:
+---
+
+## Tech Stack
+
+| Component | Technology |
+|------------|-------------|
+| **Frontend** | React, TypeScript, TailwindCSS |
+| **Backend** | Cloudflare Workers (TypeScript) |
+| **AI / LLMs** | Cloudflare Workers AI (Llama 3.3), Google Gemini 2.0 |
+| **State & Storage** | Cloudflare D1 (SQL), Cloudflare R2 (Object Storage) |
+| **Persistence** | Durable Objects for conversation context |
+| **Deployment** | Cloudflare Pages + Wrangler CLI |
+
+---
+
+## Setup Instructions
+
+### 1. Clone and Configure
 
 ```bash
+git clone https://github.com/aleale2121/cf_ai_finops_copilot.git
+cd cf_ai_finops_copilot
 npm install
 ```
 
-3. Set up your environment:
-
-Create a `.dev.vars` file:
-
-```env
-OPENAI_API_KEY=your_openai_api_key
-```
-
-4. Run locally:
+### 2. Apply Database Schema
 
 ```bash
-npm start
+npx wrangler d1 execute COST_ANALYZER_DB --remote --file=schema.sql
 ```
 
-5. Deploy:
+### 3. Run Locally
 
 ```bash
-npm run deploy
+npx wrangler dev
 ```
 
-## Project Structure
+### 4. Deploy to Cloudflare
 
-```
-├── src/
-│   ├── app.tsx        # Chat UI implementation
-│   ├── server.ts      # Chat agent logic
-│   ├── tools.ts       # Tool definitions
-│   ├── utils.ts       # Helper functions
-│   └── styles.css     # UI styling
+```bash
+npx wrangler deploy
 ```
 
-## Customization Guide
+---
 
-### Adding New Tools
+## Environment Bindings
 
-Add new tools in `tools.ts` using the tool builder:
+| Binding | Type | Description |
+|----------|------|-------------|
+| `AI` | Workers AI | Access to Llama 3.3 |
+| `GOOGLE_GEMINI_API_KEY` | Secret | API key for Gemini |
+| `DB` | D1 Database | Persistent FinOps data |
+| `FILES` | R2 Bucket | File uploads |
+| `ASSETS` | Pages / Static assets | Frontend |
+| `Chat` | Durable Object | Stateful chat memory |
 
-```ts
-// Example of a tool that requires confirmation
-const searchDatabase = tool({
-  description: "Search the database for user records",
-  parameters: z.object({
-    query: z.string(),
-    limit: z.number().optional()
-  })
-  // No execute function = requires confirmation
-});
+---
 
-// Example of an auto-executing tool
-const getCurrentTime = tool({
-  description: "Get current server time",
-  parameters: z.object({}),
-  execute: async () => new Date().toISOString()
-});
+## Example Prompts
 
-// Scheduling tool implementation
-const scheduleTask = tool({
-  description:
-    "schedule a task to be executed at a later time. 'when' can be a date, a delay in seconds, or a cron pattern.",
-  parameters: z.object({
-    type: z.enum(["scheduled", "delayed", "cron"]),
-    when: z.union([z.number(), z.string()]),
-    payload: z.string()
-  }),
-  execute: async ({ type, when, payload }) => {
-    // ... see the implementation in tools.ts
-  }
-});
+- **Relevance filter:** “Is this message related to cloud cost optimization or cloud infrastructure?” → YES/NO  
+- **Analysis prompt:** “Given PLAN, METRICS, COMMENT → produce FinOps summary + JSON of optimization areas.”  
+- **Summary prompt:** “Summarize key cloud spend drivers and suggested actions.”  
+
+---
+
+## 🌐 Deployment
+
+**Live Demo:** [https://cloud-usage-advisor.alefew-yimer.workers.dev](https://cloud-usage-advisor.alefew-yimer.workers.dev)
+
+---
+
+## 📁 Repository Structure
+
+```markdown
+src/
+ ├── app.tsx
+ ├── server.ts
+ ├── d1.ts
+ ├── optimizer.ts
+ ├── tools.ts
+ ├── utils.ts
+ ├── file-storage.ts
+ └── components/
+      ├── chat/
+      ├── layout/
+      ├── file-upload/
+      └── shared/
+schema.sql
+PROMPTS.md
+README.md
+wrangler.jsonc
 ```
 
-To handle tool confirmations, add execution functions to the `executions` object:
+---
 
-```typescript
-export const executions = {
-  searchDatabase: async ({
-    query,
-    limit
-  }: {
-    query: string;
-    limit?: number;
-  }) => {
-    // Implementation for when the tool is confirmed
-    const results = await db.search(query, limit);
-    return results;
-  }
-  // Add more execution handlers for other tools that require confirmation
-};
-```
+## 👤 Author
 
-Tools can be configured in two ways:
+**Alefew Yimer Yimam**  
+M.S. Data Science @ Fordham University  
+[GitHub: aleale2121](https://github.com/aleale2121)
 
-1. With an `execute` function for automatic execution
-2. Without an `execute` function, requiring confirmation and using the `executions` object to handle the confirmed action. NOTE: The keys in `executions` should match `toolsRequiringConfirmation` in `app.tsx`.
+---
 
-### Use a different AI model provider
+## 🧾 License
 
-The starting [`server.ts`](https://github.com/cloudflare/agents-starter/blob/main/src/server.ts) implementation uses the [`ai-sdk`](https://sdk.vercel.ai/docs/introduction) and the [OpenAI provider](https://sdk.vercel.ai/providers/ai-sdk-providers/openai), but you can use any AI model provider by:
-
-1. Installing an alternative AI provider for the `ai-sdk`, such as the [`workers-ai-provider`](https://sdk.vercel.ai/providers/community-providers/cloudflare-workers-ai) or [`anthropic`](https://sdk.vercel.ai/providers/ai-sdk-providers/anthropic) provider:
-2. Replacing the AI SDK with the [OpenAI SDK](https://github.com/openai/openai-node)
-3. Using the Cloudflare [Workers AI + AI Gateway](https://developers.cloudflare.com/ai-gateway/providers/workersai/#workers-binding) binding API directly
-
-For example, to use the [`workers-ai-provider`](https://sdk.vercel.ai/providers/community-providers/cloudflare-workers-ai), install the package:
-
-```sh
-npm install workers-ai-provider
-```
-
-Add an `ai` binding to `wrangler.jsonc`:
-
-```jsonc
-// rest of file
-  "ai": {
-    "binding": "AI"
-  }
-// rest of file
-```
-
-Replace the `@ai-sdk/openai` import and usage with the `workers-ai-provider`:
-
-```diff
-// server.ts
-// Change the imports
-- import { openai } from "@ai-sdk/openai";
-+ import { createWorkersAI } from 'workers-ai-provider';
-
-// Create a Workers AI instance
-+ const workersai = createWorkersAI({ binding: env.AI });
-
-// Use it when calling the streamText method (or other methods)
-// from the ai-sdk
-- const model = openai("gpt-4o-2024-11-20");
-+ const model = workersai("@cf/deepseek-ai/deepseek-r1-distill-qwen-32b")
-```
-
-Commit your changes and then run the `agents-starter` as per the rest of this README.
-
-### Modifying the UI
-
-The chat interface is built with React and can be customized in `app.tsx`:
-
-- Modify the theme colors in `styles.css`
-- Add new UI components in the chat container
-- Customize message rendering and tool confirmation dialogs
-- Add new controls to the header
-
-### Example Use Cases
-
-1. **Customer Support Agent**
-   - Add tools for:
-     - Ticket creation/lookup
-     - Order status checking
-     - Product recommendations
-     - FAQ database search
-
-2. **Development Assistant**
-   - Integrate tools for:
-     - Code linting
-     - Git operations
-     - Documentation search
-     - Dependency checking
-
-3. **Data Analysis Assistant**
-   - Build tools for:
-     - Database querying
-     - Data visualization
-     - Statistical analysis
-     - Report generation
-
-4. **Personal Productivity Assistant**
-   - Implement tools for:
-     - Task scheduling with flexible timing options
-     - One-time, delayed, and recurring task management
-     - Task tracking with reminders
-     - Email drafting
-     - Note taking
-
-5. **Scheduling Assistant**
-   - Build tools for:
-     - One-time event scheduling using specific dates
-     - Delayed task execution (e.g., "remind me in 30 minutes")
-     - Recurring tasks using cron patterns
-     - Task payload management
-     - Flexible scheduling patterns
-
-Each use case can be implemented by:
-
-1. Adding relevant tools in `tools.ts`
-2. Customizing the UI for specific interactions
-3. Extending the agent's capabilities in `server.ts`
-4. Adding any necessary external API integrations
-
-## Learn More
-
-- [`agents`](https://github.com/cloudflare/agents/blob/main/packages/agents/README.md)
-- [Cloudflare Agents Documentation](https://developers.cloudflare.com/agents/)
-- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
-
-## License
-
-MIT
+MIT License © 2025 Alefew Yimer Yimam
