@@ -1,3 +1,5 @@
+-- Migration number: 0001 	 2025-11-05T14:42:37.171Z
+-- Up
 -- Conversations (threads)
 CREATE TABLE IF NOT EXISTS conversations (
   threadId TEXT PRIMARY KEY,
@@ -38,8 +40,8 @@ CREATE TABLE IF NOT EXISTS uploaded_files (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   userId TEXT NOT NULL,
   threadId TEXT NOT NULL,
-  sessionId TEXT NOT NULL, 
-  messageId TEXT NOT NULL, 
+  sessionId TEXT NOT NULL,
+  messageId TEXT NOT NULL,
   analysisId INTEGER,
   fileName TEXT NOT NULL,
   fileType TEXT NOT NULL,
@@ -58,4 +60,19 @@ CREATE INDEX IF NOT EXISTS idx_analyses_user_created ON analyses (userId, dateti
 CREATE INDEX IF NOT EXISTS idx_files_user_thread ON uploaded_files(userId, threadId);
 CREATE INDEX IF NOT EXISTS idx_files_message ON uploaded_files(messageId);
 CREATE INDEX IF NOT EXISTS idx_files_analysis ON uploaded_files(analysisId);
-CREATE INDEX IF NOT EXISTS idx_files_session ON uploaded_files(sessionId); 
+CREATE INDEX IF NOT EXISTS idx_files_session ON uploaded_files(sessionId);
+
+-- Down
+DROP INDEX IF EXISTS idx_files_session;
+DROP INDEX IF EXISTS idx_files_analysis;
+DROP INDEX IF EXISTS idx_files_message;
+DROP INDEX IF EXISTS idx_files_user_thread;
+DROP INDEX IF EXISTS idx_analyses_user_created;
+DROP INDEX IF EXISTS idx_msg_messageId;
+DROP INDEX IF EXISTS idx_msg_thread_created;
+DROP INDEX IF EXISTS idx_conv_user_created;
+
+DROP TABLE IF EXISTS uploaded_files;
+DROP TABLE IF EXISTS analyses;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS conversations;
