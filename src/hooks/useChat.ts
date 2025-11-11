@@ -39,7 +39,7 @@ export function useChat() {
         ? `/api/chat/history?threadId=${currentThreadId}`
         : "/api/chat/history";
 
-      console.log("📖 Loading chat history...");
+      console.log("Loading chat history...");
       const r = await fetch(url);
 
       if (!r.ok) {
@@ -50,7 +50,7 @@ export function useChat() {
       const d: HistoryResponse & { threadId?: string } = await r.json();
 
       if (d.messages && d.messages.length > 0) {
-        console.log(`📖 Loaded ${d.messages.length} messages`);
+        console.log(`Loaded ${d.messages.length} messages`);
         setChat(
           d.messages.map((msg) => ({
             ...msg,
@@ -65,7 +65,7 @@ export function useChat() {
 
         hasLoadedHistory.current = true;
       } else {
-        console.log("📖 No messages found in history");
+        console.log("No messages found in history");
         hasLoadedHistory.current = true;
       }
     } catch (error) {
@@ -78,11 +78,11 @@ export function useChat() {
 
   const loadThread = async (threadId: string) => {
     try {
-      console.log(`📖 Loading thread: ${threadId}`);
+      console.log(`Loading thread: ${threadId}`);
       const response = await fetch(`/api/chat/threads/${threadId}/messages`);
       if (response.ok) {
         const data = (await response.json()) as { messages: ChatMessage[] };
-        console.log(`📖 Loaded ${data.messages.length} messages for thread`);
+        console.log(`Loaded ${data.messages.length} messages for thread`);
 
         setChat(
           data.messages.map((msg) => ({
@@ -243,11 +243,12 @@ export function useChat() {
 
   const handleNewChat = async () => {
     try {
-      console.log("🆕 Starting new chat...");
+      console.log("Starting new chat...");
 
       setChat([]);
       setMessage("");
       setFileUploads([]);
+      setCurrentThreadId(null);
       setIsNewChat(true);
       hasLoadedHistory.current = false;
 
@@ -281,7 +282,7 @@ export function useChat() {
 
   const handleSend = async () => {
     const uploadedFiles = fileUploads
-      .filter((f) => f.status === "completed")
+      .filter((f) => f.status === "completed" && f.uploadedFile)
       .map((f) => f.uploadedFile!);
     const hasCompletedUploads = uploadedFiles.length > 0;
     const hasMessage = message.trim().length > 0;
@@ -289,18 +290,15 @@ export function useChat() {
 
     if (!isSendEnabled) return;
 
-    setLoading(true);
+    if (!hasMessage && !hasCompletedUploads) return;
     const fileIds = uploadedFiles.map((f) => f.id);
 
+    setLoading(true);
     const userMessageId = crypto.randomUUID();
 
     const userMessage: ChatMessage = {
       role: "user",
-      text: hasMessage
-        ? message
-        : hasCompletedUploads
-          ? "[Uploaded Files]"
-          : "",
+      text: hasMessage ? message : "[Uploaded Files]",
       timestamp: new Date(),
       files: uploadedFiles,
       messageId: userMessageId
@@ -313,39 +311,26 @@ export function useChat() {
 
     try {
       const currentSessionId = uploadSessionId;
-      if (!currentSessionId) {
-        console.error("❌ No session ID available for sending message");
-        setLoading(false);
-        return;
-      }
-
+    
       let threadIdForMessage = currentThreadId;
 
-      if (!threadIdForMessage && isNewChat) {
-        console.log("New chat - creating thread before sending message...");
+      if (!threadIdForMessage) {
         const newThreadResponse = await fetch("/api/chat/new", {
           method: "POST"
         });
-
-        if (newThreadResponse.ok) {
-          const data = (await newThreadResponse.json()) as NewChatResponse;
-          threadIdForMessage = data.threadId;
-          setCurrentThreadId(threadIdForMessage);
-          setIsNewChat(false);
-          console.log("✅ Created new thread for message:", threadIdForMessage);
-        } else {
-          throw new Error("Failed to create thread for message");
-        }
+        const data = (await newThreadResponse.json()) as NewChatResponse;
+        threadIdForMessage = data.threadId;
+        setCurrentThreadId(threadIdForMessage);
+        setIsNewChat(false);
       }
 
       const requestBody: ChatRequest = {
         sessionId: currentSessionId,
         message: hasMessage ? message : undefined,
-        fileIds: fileIds.length > 0 ? fileIds : undefined,
+        fileIds,
         threadId: threadIdForMessage || undefined
       };
 
-      console.log("Sending message to thread:", threadIdForMessage);
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -360,30 +345,15 @@ export function useChat() {
           timestamp: new Date(),
           messageId: data.messageId || crypto.randomUUID()
         };
-
         setChat((c) => [...c, assistantMessage]);
-
-        if (data.threadId && data.threadId !== currentThreadId) {
-          setCurrentThreadId(data.threadId);
-        }
-
-        if (isNewChat) {
-          setIsNewChat(false);
-        }
-
-        generateNewSessionId();
       }
+
+      generateNewSessionId();
     } catch (error) {
       console.error(error);
-      const errorMessage: ChatMessage = {
-        role: "assistant",
-        text: "❌ Error: failed to reach server.",
-        timestamp: new Date(),
-        messageId: crypto.randomUUID()
-      };
-      setChat((c) => [...c, errorMessage]);
     } finally {
       setLoading(false);
+      setFileUploads([]);
     }
   };
 

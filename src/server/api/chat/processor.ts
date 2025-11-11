@@ -24,32 +24,34 @@ export async function processChatMessage(
 
   if (fileIds.length > 0) {
     console.log("📁 Querying files by file IDs...");
-    const fileIdsPlaceholder = fileIds.map(() => "?").join(",");
-    const { results: filesResult } = await env.DB.prepare(
-      `SELECT * FROM uploaded_files 
-       WHERE userId = ? AND threadId = ? AND id IN (${fileIdsPlaceholder})
-       ORDER BY fileName ASC`
+
+    const placeholders = fileIds.map(() => "?").join(",");
+
+    const { results } = await env.DB.prepare(
+      `SELECT id, fileName, fileType, fileSize, r2Key, uploadedAt
+       FROM uploaded_files
+       WHERE id IN (${placeholders})`
     )
-      .bind(userId, threadId, ...fileIds)
+      .bind(...fileIds)
       .all();
 
-    files = (
-      filesResult as {
-        id: number;
-        fileName: string;
-        fileType: string;
-        fileSize: number;
-        r2Key: string;
-        uploadedAt: string;
-      }[]
-    ).map((file) => ({
+    const rawFiles = results as unknown as {
+      id: number;
+      fileName: string;
+      fileType: string;
+      fileSize: number;
+      r2Key: string;
+      uploadedAt: string;
+    }[];
+
+    files = rawFiles.map((file) => ({
       id: file.id,
       fileName: file.fileName,
       fileType: file.fileType,
       fileSize: file.fileSize,
       r2Key: file.r2Key,
       uploadedAt: file.uploadedAt
-    }));
+    })) as UploadedFile[];
   } else if (sessionId) {
     console.log("Querying files by session ID...");
     files = await getFilesBySession(env, sessionId);
